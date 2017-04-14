@@ -10,6 +10,7 @@ import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Sequence (Seq)
 
+import Language.HigherRank.Print (printExpr, printType)
 import Language.HigherRank.Types
 
 isMono :: Type -> Bool
@@ -149,7 +150,7 @@ tySub a (TAll v b) = do
   modifyCtx (ctxUntil (CtxVar v))
 tySub (TEVar â) a | â `notElem` freeVars a = instL â a
 tySub a (TEVar â) | â `notElem` freeVars a = instR a â
-tySub a b = throwError $ "type mismatch: expected " ++ show b ++ ", given " ++ show a
+tySub a b = throwError $ "type mismatch: expected " ++ printType b ++ ", given " ++ printType a
 
 instL :: TEVar -> Type -> CheckM ()
 instL â t = getCtx >>= go where
@@ -231,7 +232,7 @@ infer :: Expr -> CheckM Type
 infer EUnit = return TUnit
 infer (EVar x) = do
   ctx <- getCtx
-  maybe (throwError $ "unbound variable " ++ show x) return (ctxAssump ctx x)
+  maybe (throwError $ "unbound variable " ++ unEVar x) return (ctxAssump ctx x)
 infer (EAnn e a) = checkTypeWF a >> check e a >> return a
 infer (ELam x e) = do
   â <- freshEVar
@@ -257,7 +258,7 @@ inferApp (TEVar â) e = do
   check e (TEVar â1)
   return $ TEVar â2
 inferApp (TArr a c) e = check e a >> return c
-inferApp t e = throwError $ "cannot apply expression of type " ++ show t ++ " to expression " ++ show e
+inferApp t e = throwError $ "cannot apply expression of type " ++ printType t ++ " to expression " ++ printExpr e
 
 runInfer :: Expr -> Either String Type
 runInfer e = do
