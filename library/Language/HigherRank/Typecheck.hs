@@ -1,8 +1,9 @@
 module Language.HigherRank.Typecheck
-  ( Expr(..)
-  , EVar(..)
-  , Type(..)
+  ( EVar(..)
+  , Expr(..) 
+  , TEVar(..)
   , TVar(..)
+  , Type(..)
   , runInfer
   ) where
 
