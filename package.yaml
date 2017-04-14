@@ -11,6 +11,9 @@ extra-source-files:
 - stack.yaml
 
 ghc-options: -Wall
+default-extensions:
+- GeneralizedNewtypeDeriving
+- LambdaCase
 
 library:
   dependencies:

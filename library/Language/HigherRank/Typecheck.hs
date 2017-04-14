@@ -1,5 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module Language.HigherRank.Typecheck
   ( Expr(..)
   , EVar(..)
