@@ -1,11 +1,4 @@
-module Language.HigherRank.Typecheck
-  ( EVar(..)
-  , Expr(..) 
-  , TEVar(..)
-  , TVar(..)
-  , Type(..)
-  , runInfer
-  ) where
+module Language.HigherRank.Typecheck (runInfer) where
 
 import qualified Data.Sequence as S
 
@@ -17,30 +10,7 @@ import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Sequence (Seq)
 
-newtype EVar = MkEVar { unEVar :: String }
-  deriving (Eq, Ord, Show)
-
-data Expr
-  = EUnit
-  | EVar EVar
-  | EAnn Expr Type
-  | ELam EVar Expr
-  | EApp Expr Expr
-  deriving (Eq, Ord, Show)
-
-newtype TVar = MkTVar { unTVar :: String }
-  deriving (Eq, Ord, Show)
-
-newtype TEVar = MkTEVar { unTEVar :: String }
-  deriving (Eq, Ord, Show)
-
-data Type
-  = TUnit
-  | TVar TVar
-  | TEVar TEVar
-  | TArr Type Type
-  | TAll TVar Type
-  deriving (Eq, Ord, Show)
+import Language.HigherRank.Types
 
 isMono :: Type -> Bool
 isMono TUnit = True

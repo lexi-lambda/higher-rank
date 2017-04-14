@@ -1,19 +1,11 @@
-module Language.HigherRank.Interpret (ReducedExpr(..), runInterpret) where
+module Language.HigherRank.Interpret (runInterpret) where
 
 import qualified Data.Map as M
 
 import Control.Monad.Except (MonadError, Except, runExcept, throwError)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, local, runReaderT)
 
-import Language.HigherRank.Typecheck (EVar, Expr(..))
-
-data ReducedExpr
-  = REUnit
-  | RELam Env EVar Expr
-  deriving (Eq, Show)
-
-newtype Env = Env (M.Map EVar ReducedExpr)
-  deriving (Eq, Show, Monoid)
+import Language.HigherRank.Types
 
 newtype InterpretM a = InterpretM (ReaderT Env (Except String) a)
   deriving (Functor, Applicative, Monad, MonadReader Env, MonadError String)

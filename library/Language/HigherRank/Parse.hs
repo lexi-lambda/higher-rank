@@ -4,7 +4,7 @@ import Data.Functor (($>))
 import Text.Megaparsec
 import Text.Megaparsec.String
 
-import Language.HigherRank.Typecheck
+import Language.HigherRank.Types
 
 identifierP :: Parser String
 identifierP = (:) <$> letterChar <*> many alphaNumChar

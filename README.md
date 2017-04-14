@@ -20,7 +20,9 @@ $ stack exec higher-rank
 
 The implementation is divided among the following modules:
 
-  - `Language.HigherRank.Typecheck` — The core implementation of the typechecker, which contains all of the code that implements the actual paper. If you are only interested in the typechecking algorithm and aren’t interested in the interpreter or REPL, you can focus exclusively on this module.
+  - `Language.HigherRank.Types` — Holds type definitions used by other modules. This module mostly only exists to break module loading cycles between the printer and interpreter/typechecker.
+
+  - `Language.HigherRank.Typecheck` — The core implementation of the typechecker, which contains all of the code that implements the actual paper. If you are only interested in the typechecking algorithm and aren’t interested in the interpreter or REPL, you can focus exclusively on this module and `Language.HigherRank.Types`.
 
   - `Language.HigherRank.Interpret` — Contains the implementation of a very simple interpreter, which evaluates expressions without doing any typechecking.
 

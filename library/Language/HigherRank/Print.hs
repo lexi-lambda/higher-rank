@@ -1,7 +1,6 @@
 module Language.HigherRank.Print (printExpr, printReducedExpr, printType) where
 
-import Language.HigherRank.Interpret (ReducedExpr(..))
-import Language.HigherRank.Typecheck (EVar(..), Expr(..), TEVar(..), TVar(..), Type(..))
+import Language.HigherRank.Types
 
 printExpr :: Expr -> String
 printExpr EUnit = "()"
