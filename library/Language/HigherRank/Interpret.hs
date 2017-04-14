@@ -5,7 +5,7 @@ import qualified Data.Map as M
 import Control.Monad.Except (MonadError, Except, runExcept, throwError)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, local, runReaderT)
 
-import Language.HigherRank.Typecheck
+import Language.HigherRank.Typecheck (EVar, Expr(..))
 
 newtype Env = Env (M.Map EVar Expr)
   deriving (Eq, Show, Monoid)

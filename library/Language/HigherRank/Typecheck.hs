@@ -3,7 +3,6 @@ module Language.HigherRank.Typecheck
   , EVar(..)
   , Type(..)
   , TVar(..)
-  , TEVar(..)
   , runInfer
   ) where
 
@@ -290,4 +289,6 @@ inferApp (TArr a c) e = check e a >> return c
 inferApp t e = throwError $ "cannot apply expression of type " ++ show t ++ " to expression " ++ show e
 
 runInfer :: Expr -> Either String Type
-runInfer e = runCheckM $ infer e
+runInfer e = do
+  (t, ctx) <- runCheckM ((,) <$> infer e <*> getCtx)
+  return $ applySubst ctx t
