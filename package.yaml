@@ -20,6 +20,7 @@ library:
   dependencies:
   - base
   - containers
+  - haskeline
   - megaparsec
   - mtl
   source-dirs: library
