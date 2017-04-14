@@ -1,5 +1,6 @@
-module Language.HigherRank.Print (printExpr, printType) where
+module Language.HigherRank.Print (printExpr, printReducedExpr, printType) where
 
+import Language.HigherRank.Interpret (ReducedExpr(..))
 import Language.HigherRank.Typecheck (EVar(..), Expr(..), TEVar(..), TVar(..), Type(..))
 
 printExpr :: Expr -> String
@@ -8,6 +9,10 @@ printExpr (EVar (MkEVar x)) = x
 printExpr (EAnn e t) = "(" ++ printExpr e ++ " : " ++ printType t ++ ")"
 printExpr (ELam (MkEVar x) e) = "(\\" ++ x ++ " -> " ++ printExpr e ++ ")"
 printExpr (EApp a b) = "(" ++ printExpr a ++ " " ++ printExpr b ++ ")"
+
+printReducedExpr :: ReducedExpr -> String
+printReducedExpr REUnit = "()"
+printReducedExpr (RELam _ (MkEVar x) e) = "(\\" ++ x ++ " -> " ++ printExpr e ++ ")"
 
 printType :: Type -> String
 printType TUnit = "()"

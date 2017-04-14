@@ -1,4 +1,4 @@
-module Language.HigherRank.Interpret (runInterpret) where
+module Language.HigherRank.Interpret (ReducedExpr(..), runInterpret) where
 
 import qualified Data.Map as M
 
@@ -7,7 +7,12 @@ import Control.Monad.Reader (MonadReader, ReaderT, ask, local, runReaderT)
 
 import Language.HigherRank.Typecheck (EVar, Expr(..))
 
-newtype Env = Env (M.Map EVar Expr)
+data ReducedExpr
+  = REUnit
+  | RELam Env EVar Expr
+  deriving (Eq, Show)
+
+newtype Env = Env (M.Map EVar ReducedExpr)
   deriving (Eq, Show, Monoid)
 
 newtype InterpretM a = InterpretM (ReaderT Env (Except String) a)
@@ -16,22 +21,28 @@ newtype InterpretM a = InterpretM (ReaderT Env (Except String) a)
 runInterpretM :: InterpretM a -> Either String a
 runInterpretM (InterpretM x) = runExcept $ runReaderT x mempty
 
-lookupVar :: EVar -> InterpretM Expr
+lookupVar :: EVar -> InterpretM ReducedExpr
 lookupVar x = do
   Env env <- ask
   maybe (throwError $ "unbound variable " ++ show x) return $ M.lookup x env
 
-withBinding :: EVar -> Expr -> InterpretM a -> InterpretM a
+withBinding :: EVar -> ReducedExpr -> InterpretM a -> InterpretM a
 withBinding x e = local $ \(Env env) -> Env $ M.insert x e env
 
-interpret :: Expr -> InterpretM Expr
-interpret EUnit = return EUnit
+close :: InterpretM Env
+close = ask
+
+open :: Env -> InterpretM a -> InterpretM a
+open env = local (const env)
+
+interpret :: Expr -> InterpretM ReducedExpr
+interpret EUnit = return REUnit
 interpret (EVar x) = lookupVar x
 interpret (EAnn e _) = interpret e
-interpret e@(ELam _ _) = return e
+interpret (ELam x e) = RELam <$> close <*> pure x <*> pure e
 interpret (EApp f a) = interpret f >>= \case
-  ELam x e -> interpret a >>= \b -> withBinding x b (interpret e)
+  RELam env x e -> interpret a >>= \b -> open env (withBinding x b (interpret e))
   other -> throwError $ "cannot apply non-function value " ++ show other
 
-runInterpret :: Expr -> Either String Expr
+runInterpret :: Expr -> Either String ReducedExpr
 runInterpret = runInterpretM . interpret

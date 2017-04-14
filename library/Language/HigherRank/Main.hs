@@ -4,7 +4,7 @@ import System.Console.Haskeline
 
 import Language.HigherRank.Interpret (runInterpret)
 import Language.HigherRank.Parse (parseExpr)
-import Language.HigherRank.Print (printExpr, printType)
+import Language.HigherRank.Print (printReducedExpr, printType)
 import Language.HigherRank.Typecheck (runInfer)
 
 fromEither :: Either a a -> a
@@ -22,4 +22,4 @@ main = repl $ \input -> fromEither $ do
   e <- parseExpr input
   t <- runInfer e
   r <- runInterpret e
-  return $ printExpr r ++ " : " ++ printType t
+  return $ printReducedExpr r ++ " : " ++ printType t
