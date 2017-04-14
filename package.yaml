@@ -1,0 +1,45 @@
+name: higher-rank
+version: '0.0.0'
+category: Other
+synopsis: A new Haskeleton package.
+description: higher-rank is a new Haskeleton package.
+maintainer: Alexis King
+
+extra-source-files:
+- package.yaml
+- README.md
+- stack.yaml
+
+ghc-options: -Wall
+
+library:
+  dependencies:
+  - base
+  - containers
+  - mtl
+  source-dirs: library
+
+executables:
+  higher-rank:
+    dependencies:
+    - base
+    - higher-rank
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    main: Main.hs
+    source-dirs: executable
+
+tests:
+  higher-rank-test-suite:
+    dependencies:
+    - base
+    - higher-rank
+    - hspec
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    main: Main.hs
+    source-dirs: test-suite
