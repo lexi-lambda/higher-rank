@@ -1,4 +1,4 @@
-module Language.HigherRank.Parse (parseExpr) where
+module Language.HigherRank.Parse (parseExpr, parseType) where
 
 import Data.Functor (($>))
 import Text.Megaparsec
@@ -61,7 +61,13 @@ typeP = (TVar <$> tvarP)
     <|> try tallP
     <?> "type"
 
-parseExpr :: String -> Either String Expr
-parseExpr str = case parse (exprP <* eof) "" str of
+execParser :: Parser a -> String -> Either String a
+execParser p str = case parse (p <* eof) "" str of
   Right expr -> Right expr
   Left err -> Left $ parseErrorPretty err
+
+parseExpr :: String -> Either String Expr
+parseExpr = execParser exprP
+
+parseType :: String -> Either String Type
+parseType = execParser typeP

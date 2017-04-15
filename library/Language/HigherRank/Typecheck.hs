@@ -254,7 +254,9 @@ inferApp (TAll v a) e = do
 inferApp (TEVar â) e = do
   â1 <- freshEVar
   â2 <- freshEVar
-  modifyCtx (\c -> c |> CtxEVar â2 |> CtxEVar â1 |> CtxSolved â (TArr (TEVar â1) (TEVar â2)))
+  ctx <- getCtx
+  let Just (l, r) = ctxHole (CtxEVar â) ctx
+  putCtx $ l |> CtxEVar â2 |> CtxEVar â1 |> CtxSolved â (TArr (TEVar â1) (TEVar â2)) <> r
   check e (TEVar â1)
   return $ TEVar â2
 inferApp (TArr a c) e = check e a >> return c
