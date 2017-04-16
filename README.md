@@ -1,7 +1,7 @@
 # higher-rank
 
 A small Haskell implementation of [Complete and Easy Bidirectional Typechecking
-for Higher-Rank Polymorphism][complete-and-easy].
+for Higher-Rank Polymorphism][complete-and-easy]. This is a sister project to [the Racket implementation][racket-higher-rank], which is adapted from this one.
 
 This implementation is designed to be both simple and relatively complete. Where the two conflict, it prefers simplicity. This means that there is no source location reporting for type errors, for example, which would considerably complicate the implementation, but it *does* attempt to provide good error messages with the information it has.
 
@@ -33,3 +33,4 @@ The implementation is divided among the following modules:
   - `Language.HigherRank.Main` — This implements the actual REPL by combining all of the above pieces together.
 
 [complete-and-easy]: http://www.cs.cmu.edu/~joshuad/papers/bidir/
+[racket-higher-rank]: https://github.com/lexi-lambda/racket-higher-rank
