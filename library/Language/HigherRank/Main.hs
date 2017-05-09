@@ -2,6 +2,7 @@ module Language.HigherRank.Main (main) where
 
 import System.Console.Haskeline
 
+import Language.HigherRank.Desugar (desugar)
 import Language.HigherRank.Interpret (runInterpret)
 import Language.HigherRank.Parse (parseExpr)
 import Language.HigherRank.Print (printReducedExpr, printType)
@@ -19,7 +20,7 @@ repl f = runInputT defaultSettings loop
 
 main :: IO ()
 main = repl $ \input -> fromEither $ do
-  e <- parseExpr input
+  e <- desugar <$> parseExpr input
   t <- runInfer e
   r <- runInterpret e
   return $ printReducedExpr r ++ " : " ++ printType t

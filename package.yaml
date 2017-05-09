@@ -24,6 +24,7 @@ library:
   - haskeline
   - megaparsec
   - mtl
+  - template-haskell
   source-dirs: library
 
 executables:
@@ -44,7 +45,6 @@ tests:
     - base
     - higher-rank
     - hspec
-    - template-haskell
     ghc-options:
     - -rtsopts
     - -threaded

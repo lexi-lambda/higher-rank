@@ -4,8 +4,8 @@ module Language.HigherRank.TypecheckSpec (spec) where
 
 import Test.Hspec
 
-import Language.HigherRank.TH
 import Language.HigherRank.Typecheck
+import Language.HigherRank.Util.TH
 
 spec :: Spec
 spec = describe "Typecheck" $ do

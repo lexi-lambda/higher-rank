@@ -1,3 +1,6 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
+
 module Language.HigherRank.Typecheck (runInfer) where
 
 import qualified Data.Sequence as S
@@ -6,15 +9,21 @@ import Control.Monad (unless)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT, throwError)
 import Control.Monad.State (MonadState, State, evalState, get, gets, put, modify)
 import Data.Foldable (toList)
+import Data.List (nub)
 import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Sequence (Seq)
 
 import Language.HigherRank.Print (printExpr, printType)
 import Language.HigherRank.Types
+import Language.HigherRank.Util.TH
+
+import Debug.Trace
 
 isMono :: Type -> Bool
 isMono TUnit = True
+isMono (TProduct a b) = isMono a && isMono b
+isMono (TSum a b) = isMono a && isMono b
 isMono (TVar _) = True
 isMono (TEVar _) = True
 isMono (TArr a b) = isMono a && isMono b
@@ -70,23 +79,29 @@ ctxUntil m (Ctx ctx) = Ctx $ S.takeWhileL (/= m) ctx
 
 typeWF, (⊢) :: Ctx -> Type -> Either String ()
 typeWF _ TUnit = return ()
+typeWF ctx (TProduct a b) = typeWF ctx a >> typeWF ctx b
+typeWF ctx (TSum a b) = typeWF ctx a >> typeWF ctx b
 typeWF ctx (TVar v) = unless (CtxVar v `ctxElem` ctx) $ Left $ "unbound type variable ‘" ++ unTVar v ++ "’"
 typeWF ctx (TEVar v) = unless (CtxEVar v `ctxElem` ctx || hasSolution) $ Left $ "unbound existential variable ‘" ++ unTEVar v ++ "’"
   where hasSolution = isJust (ctxSolution ctx v)
-typeWF ctx (TArr x y) = typeWF ctx x >> typeWF ctx y
+typeWF ctx (TArr a b) = typeWF ctx a >> typeWF ctx b
 typeWF ctx (TAll v t) = typeWF (ctx |> CtxVar v) t
 
 (⊢) = typeWF
 
 freeVars :: Type -> [TEVar]
 freeVars TUnit = []
+freeVars (TProduct a b) = nub (freeVars a <> freeVars b)
+freeVars (TSum a b) = nub (freeVars a <> freeVars b)
 freeVars (TVar _) = []
 freeVars (TEVar v) = [v]
-freeVars (TArr a b) = freeVars a <> freeVars b
+freeVars (TArr a b) = nub (freeVars a <> freeVars b)
 freeVars (TAll _ t) = freeVars t
 
 applySubst :: Ctx -> Type -> Type
 applySubst _ TUnit = TUnit
+applySubst ctx (TProduct a b) = TProduct (applySubst ctx a) (applySubst ctx b)
+applySubst ctx (TSum a b) = TSum (applySubst ctx a) (applySubst ctx b)
 applySubst _ t@(TVar _) = t
 applySubst ctx t@(TEVar v) = maybe t (applySubst ctx) (ctxSolution ctx v)
 applySubst ctx (TArr a b) = TArr (applySubst ctx a) (applySubst ctx b)
@@ -94,6 +109,8 @@ applySubst ctx (TAll v t) = TAll v (applySubst ctx t)
 
 inst :: (TVar, Type) -> Type -> Type
 inst _ TUnit = TUnit
+inst s (TProduct a b) = TProduct (inst s a) (inst s b)
+inst s (TSum a b) = TSum (inst s a) (inst s b)
 inst (v, s) t@(TVar v')
   | v == v' = s
   | otherwise = t
@@ -108,8 +125,21 @@ data CheckState = CheckState
   , checkNextEVar :: Integer
   } deriving (Eq, Show)
 
+baseCtx :: Ctx
+baseCtx = mempty
+  |> CtxAssump (MkEVar "Tuple")
+               [typeQ|(forall a. (forall b. (a -> (b -> (a, b)))))|]
+  |> CtxAssump (MkEVar "Left")
+               [typeQ|(forall a. (forall b. (a -> (a | b))))|]
+  |> CtxAssump (MkEVar "Right")
+               [typeQ|(forall a. (forall b. (b -> (a | b))))|]
+  |> CtxAssump (MkEVar "tuple")
+               [typeQ|(forall a. (forall b. (forall c. ((a -> (b -> c)) -> ((a, b) -> c)))))|]
+  |> CtxAssump (MkEVar "either")
+               [typeQ|(forall a. (forall b. (forall c. ((a -> c) -> ((b -> c) -> ((a | b) -> c))))))|]
+
 defCheckState :: CheckState
-defCheckState = CheckState mempty 1
+defCheckState = CheckState baseCtx 1
 
 getCtx :: CheckM Ctx
 getCtx = gets checkCtx
@@ -135,6 +165,8 @@ runCheckM (CheckM x) = evalState (runExceptT x) defCheckState
 
 tySub :: Type -> Type -> CheckM ()
 tySub TUnit TUnit = return ()
+tySub (TProduct a b) (TProduct a' b') = tySub a a' >> tySub b b'
+tySub (TSum a b) (TSum a' b') = tySub a a' >> tySub b b'
 tySub (TVar a) (TVar b) | a == b = return ()
 tySub (TEVar a) (TEVar b) | a == b = return ()
 tySub (TArr a b) (TArr a' b') = tySub a' a >> tySub b b'
@@ -174,7 +206,25 @@ instL â t = getCtx >>= go where
          instR a â1
          ctx' <- getCtx
          instL â2 (applySubst ctx' b)
-  go ctx -- InstLArrR
+  go ctx -- InstLProduct
+    | Just (l, r) <- ctxHole (CtxEVar â) ctx
+    , TProduct a b <- t
+    = do â1 <- freshEVar
+         â2 <- freshEVar
+         putCtx $ l |> CtxEVar â2 |> CtxEVar â1 |> CtxSolved â (TProduct (TEVar â1) (TEVar â2)) <> r
+         instL â1 a
+         ctx' <- getCtx
+         instL â2 (applySubst ctx' b)
+  go ctx -- InstLSum
+    | Just (l, r) <- ctxHole (CtxEVar â) ctx
+    , TSum a b <- t
+    = do â1 <- freshEVar
+         â2 <- freshEVar
+         putCtx $ l |> CtxEVar â2 |> CtxEVar â1 |> CtxSolved â (TSum (TEVar â1) (TEVar â2)) <> r
+         instL â1 a
+         ctx' <- getCtx
+         instL â2 (applySubst ctx' b)
+  go ctx -- InstLAllR
     | TAll b s <- t
     = do putCtx $ ctx |> CtxVar b
          instL â s
@@ -204,7 +254,25 @@ instR t â = getCtx >>= go where
          instL â1 a
          ctx' <- getCtx
          instR (applySubst ctx' b) â2
-  go ctx -- InstRArrL
+  go ctx -- InstRProduct
+    | Just (l, r) <- ctxHole (CtxEVar â) ctx
+    , TProduct a b <- t
+    = do â1 <- freshEVar
+         â2 <- freshEVar
+         putCtx $ l |> CtxEVar â2 |> CtxEVar â1 |> CtxSolved â (TProduct (TEVar â1) (TEVar â2)) <> r
+         instR a â1
+         ctx' <- getCtx
+         instR (applySubst ctx' b) â2
+  go ctx -- InstRSum
+    | Just (l, r) <- ctxHole (CtxEVar â) ctx
+    , TSum a b <- t
+    = do â1 <- freshEVar
+         â2 <- freshEVar
+         putCtx $ l |> CtxEVar â2 |> CtxEVar â1 |> CtxSolved â (TSum (TEVar â1) (TEVar â2)) <> r
+         instR a â1
+         ctx' <- getCtx
+         instR (applySubst ctx' b) â2
+  go ctx -- InstRAllL
     | TAll b s <- t
     = do â' <- freshEVar
          putCtx $ ctx |> CtxMarker â' |> CtxEVar â'

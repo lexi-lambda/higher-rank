@@ -9,30 +9,46 @@ import Language.HigherRank.Types
 identifierP :: Parser String
 identifierP = (:) <$> letterChar <*> many alphaNumChar
 
-eunitP :: Parser Expr
-eunitP = string "()" $> EUnit <?> "unit"
+eunitP :: Parser SugaredExpr
+eunitP = string "()" $> SEUnit <?> "unit"
+
+etupleP :: Parser SugaredExpr
+etupleP = SETuple <$> (char '(' *> space *> exprP <* space <* char ',')
+                  <*> (space *> exprP <* space <* char ')')
+                  <?> "tuple"
+
+eleftP :: Parser SugaredExpr
+eleftP = SELeft <$> (char '(' *> space *> exprP <* space <* string "|)")
+                <?> "left sum"
+
+erightP :: Parser SugaredExpr
+erightP = SERight <$> (string "(|" *> space *> exprP <* space <* char ')')
+                  <?> "right sum"
 
 evarP :: Parser EVar
 evarP = MkEVar <$> identifierP <?> "variable"
 
-eannP :: Parser Expr
-eannP = EAnn <$> (char '(' *> space *> exprP <* space <* char ':')
-             <*> (space *> typeP <* space <* char ')')
-             <?> "annotated expression"
+eannP :: Parser SugaredExpr
+eannP = SEAnn <$> (char '(' *> space *> exprP <* space <* char ':')
+              <*> (space *> typeP <* space <* char ')')
+              <?> "annotated expression"
 
-elamP :: Parser Expr
-elamP = ELam <$> (char '(' *> space *> char '\\' *> space *> evarP)
-             <*> (space *> string "->" *> space *> exprP <* space <* char ')')
-             <?> "function"
+elamP :: Parser SugaredExpr
+elamP = SELam <$> (char '(' *> space *> char '\\' *> space *> evarP)
+              <*> (space *> string "->" *> space *> exprP <* space <* char ')')
+              <?> "function"
 
-eappP :: Parser Expr
-eappP = EApp <$> (char '(' *> space *> exprP)
-             <*> (space *> exprP <* space <* char ')')
-             <?> "function application"
+eappP :: Parser SugaredExpr
+eappP = SEApp <$> (char '(' *> space *> exprP)
+              <*> (space *> exprP <* space <* char ')')
+              <?> "function application"
 
-exprP :: Parser Expr
-exprP = (EVar <$> evarP)
+exprP :: Parser SugaredExpr
+exprP = (SEVar <$> evarP)
     <|> try eunitP
+    <|> try etupleP
+    <|> try eleftP
+    <|> try erightP
     <|> try eannP
     <|> try elamP
     <|> eappP
@@ -40,6 +56,16 @@ exprP = (EVar <$> evarP)
 
 tunitP :: Parser Type
 tunitP = string "()" $> TUnit <?> "unit"
+
+tproductP :: Parser Type
+tproductP = TProduct <$> (char '(' *> space *> typeP <* space <* char ',')
+                     <*> (space *> typeP <* space <* char ')')
+                     <?> "product"
+
+tsumP :: Parser Type
+tsumP = TSum <$> (char '(' *> space *> typeP <* space <* char '|')
+             <*> (space *> typeP <* space <* char ')')
+             <?> "sum"
 
 tvarP :: Parser TVar
 tvarP = MkTVar <$> identifierP <?> "type variable"
@@ -57,6 +83,8 @@ tallP = TAll <$> (char '(' *> space *> string "forall" *> space *> tvarP <* spac
 typeP :: Parser Type
 typeP = (TVar <$> tvarP)
     <|> try tunitP
+    <|> try tproductP
+    <|> try tsumP
     <|> try tarrP
     <|> try tallP
     <?> "type"
@@ -66,7 +94,7 @@ execParser p str = case parse (p <* eof) "" str of
   Right expr -> Right expr
   Left err -> Left $ parseErrorPretty err
 
-parseExpr :: String -> Either String Expr
+parseExpr :: String -> Either String SugaredExpr
 parseExpr = execParser exprP
 
 parseType :: String -> Either String Type

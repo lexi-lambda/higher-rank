@@ -1,11 +1,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE DeriveLift #-}
 
-module Language.HigherRank.TH (exprQ, typeQ) where
+module Language.HigherRank.Util.TH (exprQ, typeQ) where
 
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax (Lift(..))
 
+import Language.HigherRank.Desugar
 import Language.HigherRank.Parse
 import Language.HigherRank.Types
 
@@ -24,7 +25,7 @@ voidQ = QuasiQuoter
   }
 
 exprQ :: QuasiQuoter
-exprQ = voidQ { quoteExp = either fail lift . parseExpr }
+exprQ = voidQ { quoteExp = either fail (lift . desugar) . parseExpr }
 
 typeQ :: QuasiQuoter
 typeQ = voidQ { quoteExp = either fail lift . parseType }
